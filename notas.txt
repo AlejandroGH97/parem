@@ -1,0 +1,8 @@
+Input:
+primera linea Q
+segunda linea Σ
+tercera linea q0
+cuarta linea F
+a partir de la quinta línea tabla δ (tamaño |Q| x |Σ|)
+* si es que no hay transición con la letra del alfabeto podrá encontrarse un caracter distinto
+* se asume que los elementos de Q son siempre números enteros
