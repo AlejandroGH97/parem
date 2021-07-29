@@ -9,20 +9,22 @@ typedef vector<bool> vb;
 typedef vector<int> vi;
 typedef vector< pair<int, int> > vpii;
 
-bool dfs(vector<vi>* I, int p, DFA& dfa);
-bool dfs_helper(DFA& dfa, vector<vi>* I, int idx, int jdx, int p);
+enum Mode {
+    RegexMatch,
+    AutomatonMatch
+};
 
-bool PaREM(DFA& dfa, const string& T, int p) {
+bool dfs(vector<vi>* I, vector<bool>* hasQ, int p, DFA& dfa, Mode mode);
+bool dfs_helper(DFA& dfa, vector<vi>* I, vector<bool>* hasQ, int idx, int jdx, int p, Mode mode);
+bool PaREM(DFA& dfa, const string& T, int p, Mode mode);
 
-/*
-    if (p > T.length()) 
-        omp_set_num_threads(T.length());
-*/
+bool PaREM(DFA& dfa, const string& T, int p, Mode mode) {
 
     int start_position;
     const int chunk_size = T.length()/p;
 
     vector <vi> I [p];
+    vector <bool> hasQ [p];
     vpii P [p];
 
     #pragma omp parallel private(start_position)
@@ -52,14 +54,13 @@ bool PaREM(DFA& dfa, const string& T, int p) {
             }
         }
 
-        else {
-            R.PB(0);
-        }
+        else R.PB(0);
 
         int k;
 
+        // R = S n L
         for (auto r : R) {
-            bool flag = 0;
+            bool flag = 0, foundQ = false;
             vi Rr;
             k = r;
             Rr.PB(r);
@@ -68,13 +69,18 @@ bool PaREM(DFA& dfa, const string& T, int p) {
                 end_position = start_position+chunk_size;
             else 
                 end_position = T.length();
+            // iterar por cada caracter del chunk
             for (j = start_position; j < end_position; ++j) {
-                if (!dfa.belongs_to_Q(r, T[j])) { flag = 1; break; }
+                if (!dfa.belongs_to_Q(k, T[j])) { flag = 1; break; }
+
+                if (dfa.belongs_to_F(k)) foundQ = true;
+
                 k = dfa.Tt[k][string(1, T[j])];
                 Rr.PB(k);
             }
             if (flag) continue;
             I[i].PB(Rr);
+            hasQ[i].PB(foundQ);
         }
 
         // FIXME: a
@@ -97,7 +103,6 @@ bool PaREM(DFA& dfa, const string& T, int p) {
 
     }
 
-
     // for (int f = 0; f < p; f++) {
     //     cout << "p" << f << ": " << endl;
     //     for (auto v : I[f]) {
@@ -110,42 +115,46 @@ bool PaREM(DFA& dfa, const string& T, int p) {
     
     // #pragma omp single
     
-    return dfs(I, p, dfa);
+    return dfs(I, hasQ, p, dfa, mode);
     
 }
 
 
-bool dfs(vector<vi>* I, int p, DFA& dfa) {
+
+bool dfs(vector<vi>* I, vector<bool>* hasQ, int p, DFA& dfa, Mode mode) {
     bool si = false;
     for (auto v : I[0]) {
         int j = 0;
         for (auto e : I[1]) {
             if (v.back() == e.front()) {
                 //cout << v.back() << " hizo match con " << e.front() << "\n";
-                si = si || dfs_helper(dfa, I, 1, j, p);
+                si = dfs_helper(dfa, I, hasQ, 1, j, p, mode);
+                if (si) return true;
             }
             j++;
             //cout << endl;
         }
     }
-    return si;
+    return false;
 }
 
-bool dfs_helper(DFA& dfa, vector<vi>* I, int idx, int jdx, int p) {
+bool dfs_helper(DFA& dfa, vector<vi>* I, vector<bool>* hasQ, int idx, int jdx, int p, Mode mode) {
     // idx = p
     // jdx = lista del proceso actual
     int j = 0;
     if (idx != p-1) {
+        if (mode == RegexMatch && hasQ[idx][jdx]) return true;
         bool si = false;
         int v = I[idx][j].back();
         for (auto e : I[idx+1]) {
             if (v == e.front()) {
                 //cout << v << " hizo match con " << e.front() << "\n";
-                si = si || dfs_helper(dfa, I, idx+1, j, p);
+                si = dfs_helper(dfa, I, hasQ, idx+1, j, p, mode);
+                if (si) return true;
             }
             j++;
         }
-        return si;
+        return false;
     } else {
         int v = I[idx][j].back();
         //cout << "llegué al estado final " << v << "\n";

@@ -17,13 +17,12 @@ int main(int argc, char** argv) {
 
     int nthr = atoi(argv[1]);
 
-    // omp_set_num_threads(nthr);
-    double dfa_start, dfa_end, dfa_total;
+    omp_set_num_threads(nthr);
 
-    dfa_start = omp_get_wtime();
     DFA dfa("Automata.txt");
-    dfa_end = omp_get_wtime();
-    dfa_total = (dfa_end - dfa_start)*1000000;
+
+    //cout << PaREM(dfa, "pareparaplaparepaparallelraplaraplapapareparaplpplaraparraraparallelapareparaplapareparaplaraplapapareparapa", nthr, RegexMatch) << "\n";
+    //return 0;
 
     cout << "finished dfa.\n";
 
@@ -34,7 +33,6 @@ int main(int argc, char** argv) {
 
     ifstream file("inputs.txt");
     ofstream results("results.txt");
-    results<<"DFA build: "<<dfa_total<<" µs\n";
     int thread_num_tests[] = {2,4,8,16};
     double start, end, total = 0.0;
 
@@ -47,13 +45,13 @@ int main(int argc, char** argv) {
         for(int j = 0; j < 4; j++) {
 
             cout<<thread_num_tests[j]<<" THREADS"<<endl;
-            results<<thread_num_tests[j]<<"\t";
+            results<<thread_num_tests[j]<<" threads: ";
             omp_set_num_threads(thread_num_tests[j]);
 
             for(int k = 0; k < 10; k++){
                 start = omp_get_wtime();
-                    if (PaREM(dfa, T, thread_num_tests[j])) cout << "posible\n";
-                    else cout << "imposible\n";
+                // RegexMatch o AutomatonMatch
+                PaREM(dfa, T, thread_num_tests[j], RegexMatch);
                 end = omp_get_wtime();
                 total += (end - start)*1000000;
             }
